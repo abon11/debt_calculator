@@ -141,9 +141,9 @@ class AllLoans:
 
         self.total_interest_paid = round(total_amount_paid - (self.total_balance_archive[0] - self.total_balance), 2)
 
-        print(f"For {self.title}, starting loan total = ${self.total_balance_archive[0]:.2f}. Paying ${monthly_payment} per month will")
-        print(f"result in achieving a balance of ${self.total_balance:.2f} after {self.month_archive[-1]} months ({(self.month_archive[-1]/12):.1f} years).") 
-        print(f"This resulted in paying a total of ${total_amount_paid:.2f}, which means we paid ${self.total_interest_paid} in interest.\n")
+        print(f"{self.title}'s starting loan total: ${self.total_balance_archive[0]:,.2f}.")
+        print(f"Paying ${monthly_payment} per month will result in achieving a balance of ${self.total_balance:,.2f} after {self.month_archive[-1]} months ({(self.month_archive[-1]/12):.0f}y {(self.month_archive[-1]%12):.0f}m).") 
+        print(f"This resulted in paying a total of ${total_amount_paid:,.2f}, which means we paid ${self.total_interest_paid:,.2f} in interest.\n")
 
         self.total_amount_paid = total_amount_paid
 
@@ -204,14 +204,24 @@ class AllLoans:
 
     def plot_piechart(self, ax):
         # Pie chart of interest vs principal
-        ax.pie(
+        wedges, texts, autotexts = ax.pie(
             [self.total_balance_archive[0], self.total_interest_paid],
             labels=['Principal', 'Interest'],
             colors=['cyan', 'pink'],
             autopct=lambda p: f'{p:.2f}%\n(${p*self.total_amount_paid/100:,.2f})',
             startangle=90
         )
-        ax.set_title(f"{self.title}'s Payment Breakdown:\n ${(self.total_balance_archive[0] + self.total_interest_paid):,.2f} paid total")
+
+        # Set label font size (outside the pie)
+        for text in texts:
+            text.set_fontsize(12)
+
+        # Set number font size (inside the pie)
+        for autotext in autotexts:
+            autotext.set_fontsize(10)
+
+        # Set title font size
+        ax.set_title(f"{self.title}'s Payment Breakdown:\n ${(self.total_balance_archive[0] + self.total_interest_paid):,.2f} paid total", fontsize=14)
 
 
 if __name__ == "__main__":
