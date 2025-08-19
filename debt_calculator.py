@@ -77,7 +77,7 @@ class Loan:
             return 0, amount_paid
 
     def plot_loan_trajectory(self, ax):
-        ax.plot(self.month_archive, self.balance_archive, linewidth=1.5, label=f'${self.start_balance} at {self.interest}%')
+        ax.plot(self.month_archive, self.balance_archive, linewidth=1.5, label=f'${self.start_balance:,} at {self.interest*100:.2f}%')
 
 
 # This is a list of all of the loans
@@ -90,28 +90,60 @@ class AllLoans:
         self.month_archive = [0]
         self.total_amount_paid = 0
 
-    # order the loan list based on target loans
-    def order_loans(self, current_month):
-        ordered_list = []
+    # # order the loan list based on target loans
+    # def order_loans(self, current_month):
+    #     ordered_list = []
 
-        full_loans = []
-        for i, loan in enumerate(self.all_loans):
-            if loan.balance > 0:
-                full_loans.append(loan)
+    #     full_loans = []
+    #     for i, loan in enumerate(self.all_loans):
+    #         if loan.balance > 0:
+    #             full_loans.append(loan)
 
-        num_full_loans = len(full_loans)
+    #     num_full_loans = len(full_loans)
 
 
-        for j in range(num_full_loans):
-            max_interest = 0
-            max_loan = 0
-            for i, loan in enumerate(full_loans):
-                if (loan.interest > max_interest) and (current_month > loan.start):
-                    max_interest = loan.interest
-                    max_loan = i
-            ordered_list.append(full_loans[max_loan])
-            full_loans.pop(max_loan)
+    #     for j in range(num_full_loans):
+    #         max_interest = 0
+    #         max_loan = 0
+    #         for i, loan in enumerate(full_loans):
+    #             if (loan.interest > max_interest) and (current_month > loan.start):
+    #                 max_interest = loan.interest
+    #                 max_loan = i
+    #         ordered_list.append(full_loans[max_loan])
+    #         full_loans.pop(max_loan)
         
+    #     return ordered_list
+    def order_loans(self, current_month, ramsay=False):
+        """
+        Orders loans for repayment.
+
+        Args:
+            current_month (int): Current month of simulation.
+            pay_smallest_first (bool): 
+                - True: Pay loans from smallest balance to largest (snowball method).
+                - False: Pay loans from highest interest to lowest, but only include loans 
+                that are currently accruing. Non-accruing loans are appended to the end.
+
+        Returns:
+            List[Loan]: Ordered list of loans to target this month.
+        """
+        # get all loans with balance remaining
+        active_loans = [loan for loan in self.all_loans if loan.balance > 0]
+
+        if ramsay:
+            # include all active loans regardless of start time
+            ordered_list = sorted(active_loans, key=lambda loan: loan.balance)
+        else:
+            # interest-rate ordering (accruing first, non-accruing later)
+            accruing_loans = [loan for loan in active_loans if current_month > loan.start]
+            non_accruing_loans = [loan for loan in active_loans if current_month <= loan.start]
+
+            # Sort accruing loans by descending interest rate
+            ordered_list = sorted(accruing_loans, key=lambda loan: loan.interest, reverse=True)
+
+            # Append non-accruing loans at the end
+            ordered_list.extend(non_accruing_loans)
+
         return ordered_list
 
     def calc_total_balance(self):
@@ -121,11 +153,11 @@ class AllLoans:
         
         self.total_balance = total_balance
 
-    def calculate_loans(self, months, monthly_payment, showplots="None"):
+    def calculate_loans(self, months, monthly_payment, showplots="None", ramsay=False):
         total_amount_paid = 0
         rollover_cash = 0
         for month in range(1, months+1):
-            ordered_loans = self.order_loans(month)
+            ordered_loans = self.order_loans(month, ramsay=ramsay)
             for i, loan in enumerate(ordered_loans):
                 if i == 0:
                     rollover_cash, amount_paid = loan.calculate_month(monthly_payment)
@@ -142,8 +174,11 @@ class AllLoans:
 
         self.total_interest_paid = round(total_amount_paid - (self.total_balance_archive[0] - self.total_balance), 2)
 
-        print(f"{self.title}'s starting loan total: ${self.total_balance_archive[0]:,.2f}.")
-        print(f"Paying ${monthly_payment} per month will result in achieving a balance of ${self.total_balance:,.2f} after {self.month_archive[-1]} months ({(self.month_archive[-1]/12):.0f}y {(self.month_archive[-1]%12):.0f}m).") 
+        if ramsay:
+            print(f"{self.title}'s starting loan total: ${self.total_balance_archive[0]:,.2f}. These numbers are using the Ramsay debt-snowball method.")
+        else:
+            print(f"{self.title}'s starting loan total: ${self.total_balance_archive[0]:,.2f}. These numbers are assuming we pay the highest interest loan first.")
+        print(f"Paying ${monthly_payment} per month will result in achieving a balance of ${self.total_balance:,.2f} after {self.month_archive[-1]} months ({np.trunc(self.month_archive[-1]/12):.0f}y {(self.month_archive[-1]%12):.0f}m).") 
         print(f"This resulted in paying a total of ${total_amount_paid:,.2f}, which means we paid ${self.total_interest_paid:,.2f} in interest.\n")
 
         self.total_amount_paid = total_amount_paid
@@ -195,7 +230,7 @@ class AllLoans:
         ax.set_ylabel('Balance ($)', fontsize=12)
         ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
         ax.grid(True)
-        ax.set_title(f"{self.title}'s Loans: ${monthly_payment}/Month Payment, \\${self.total_interest_paid} paid in interest", fontsize=14)
+        ax.set_title(f"{self.title}'s Loans: ${monthly_payment:,}/Month Payment, \\${self.total_interest_paid:,.2f} paid in interest", fontsize=14)
     
     def plot_all_loans(self, ax):
         for i in range(len(self.all_loans)):
@@ -208,7 +243,7 @@ class AllLoans:
         # Pie chart of interest vs principal
         wedges, texts, autotexts = ax.pie(
             [self.total_balance_archive[0], self.total_interest_paid],
-            labels=[f'Principal: ${self.total_balance_archive[0]:,.2f}', f'Interest: ${self.total_interest_paid:,.2f}'],
+            labels=[f'Principal:\n${self.total_balance_archive[0]:,.2f}', f'Interest:\n${self.total_interest_paid:,.2f}'],
             colors=["#33b43a", '#d92b25'],
             autopct=lambda p: f'{p:.2f}%',
             startangle=90,
