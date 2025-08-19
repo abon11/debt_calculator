@@ -6,7 +6,7 @@ import pandas as pd
 def main():
     csv_file = "debts/tristan_loans.csv"
 
-    _, all_loans = parse_csv(csv_file)
+    all_loans = parse_csv(csv_file)
     monthly_payment = 2000
 
     all_loans.calculate_loans(1000, monthly_payment, showplots="all")
@@ -24,7 +24,7 @@ def parse_csv(csv):
         loans.append(loan)
 
     all_loans = AllLoans(loans, extract_name(csv))
-    return loans, all_loans
+    return all_loans
 
 def extract_name(s):
     try:
