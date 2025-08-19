@@ -4,43 +4,12 @@ import pandas as pd
 
 
 def main():
-    # emily_loans = []
-    # emily_loans.append(Loan(3500, 0.0505, 12))
-    # emily_loans.append(Loan(2304.61, 0.0505, 0))  # 2278.08
-    # emily_loans.append(Loan(4500, 0.0453, 12))
-    # emily_loans.append(Loan(2180.33, 0.0453, 0))  # 2156.53
-    # emily_loans.append(Loan(2978, 0.0275, 12))
-    # emily_loans.append(Loan(4736.66, 0.0275, 0))  # 4703.98
-    # emily_loans.append(Loan(1867, 0.0373, 12))
-    # emily_loans.append(Loan(5995.70, 0.0373, 0))  # 5940.49
-    # emily_loans.append(Loan(22368.89, 0.0528, 0))  # 22084.42
-    # emily_loans.append(Loan(22643.28, 0.0705, 0))  # 22263.43
-    # emily_loans.append(Loan(39243.71, 0.0754, 0))  # updated from 38555.59
-    # emily_loans.append(Loan(4181.82, 0.0805, 0))  # updated from 17808.59
-
-    # all_loans = AllLoans(emily_loans, 'Emily')
-
     csv_file = "debts/tristan_loans.csv"
 
-    loan_list, all_loans = parse_csv(csv_file)
-    monthly_payment = 3500
+    _, all_loans = parse_csv(csv_file)
+    monthly_payment = 2000
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.set_xlabel('Months')
-    ax.set_ylabel('Balance ($)')
-    
-    ax.grid(True)
-    # fig.tight_layout()
-
-    interest_paid = all_loans.calculate_loans(24, monthly_payment)
-    ax.set_title(f"{extract_name(csv_file)}'s Loans: ${monthly_payment}/Month Payment, \\${interest_paid} paid in interest")
-    for i in range(len(loan_list)):
-        loan_list[i].plot_loan_trajectory(ax)
-
-    all_loans.plot_total_loan(ax)
-
-    ax.legend()
-    plt.show()
+    all_loans.calculate_loans(1000, monthly_payment, showplots="all")
 
 
 def parse_csv(csv):
@@ -118,6 +87,7 @@ class AllLoans:
         self.calc_total_balance()
         self.total_balance_archive = [self.total_balance]
         self.month_archive = [0]
+        self.total_amount_paid = 0
 
     # order the loan list based on target loans
     def order_loans(self, current_month):
@@ -150,7 +120,7 @@ class AllLoans:
         
         self.total_balance = total_balance
 
-    def calculate_loans(self, months, monthly_payment):
+    def calculate_loans(self, months, monthly_payment, showplots="None"):
         total_amount_paid = 0
         rollover_cash = 0
         for month in range(1, months+1):
@@ -169,14 +139,79 @@ class AllLoans:
             if self.total_balance == 0:
                 break
 
+        self.total_interest_paid = round(total_amount_paid - (self.total_balance_archive[0] - self.total_balance), 2)
+
         print(f"For {self.title}, starting loan total = ${self.total_balance_archive[0]:.2f}. Paying ${monthly_payment} per month will")
         print(f"result in achieving a balance of ${self.total_balance:.2f} after {self.month_archive[-1]} months ({(self.month_archive[-1]/12):.1f} years).") 
-        print(f"This resulted in paying a total of ${total_amount_paid:.2f}, which means we paid ${(total_amount_paid - (self.total_balance_archive[0] - self.total_balance)):.2f} in interest.\n")
+        print(f"This resulted in paying a total of ${total_amount_paid:.2f}, which means we paid ${self.total_interest_paid} in interest.\n")
 
-        return round(total_amount_paid - (self.total_balance_archive[0] - self.total_balance), 2)
+        self.total_amount_paid = total_amount_paid
+
+        if showplots.lower() == "balances":
+            fig, ax = plt.subplots(figsize=(10, 6))
+            self.make_balance_plot(ax, monthly_payment)
+            self.plot_all_loans(ax)
+            self.plot_total_loan(ax)
+            ax.legend()
+            plt.show()
+        elif showplots.lower() == "total balance":
+            fig, ax = plt.subplots(figsize=(10, 6))
+            self.make_balance_plot(ax, monthly_payment)
+            self.plot_total_loan(ax)
+            ax.legend()
+            plt.show()
+        elif showplots.lower() == "individual balances":
+            fig, ax = plt.subplots(figsize=(10, 6))
+            self.make_balance_plot(ax, monthly_payment)
+            self.plot_all_loans(ax)
+            ax.legend()
+            plt.show()
+        elif showplots.lower() == "pie":
+            fig, ax = plt.subplots(figsize=(6, 6))
+            self.plot_piechart(ax)
+            plt.show()
+        elif showplots.lower() == "all":
+            fig, (ax_b, ax_p) = plt.subplots(
+                1, 2,
+                figsize=(14, 6),
+                gridspec_kw={'width_ratios': [3, 1]}  # ax_b 3x wider than ax_p
+            )
+            self.make_balance_plot(ax_b, monthly_payment)
+            self.plot_all_loans(ax_b)
+            self.plot_total_loan(ax_b)
+            self.plot_piechart(ax_p)
+            ax_b.legend()
+            fig.tight_layout()
+            plt.show()
+        else:
+            if showplots.lower() != "none":
+                print(f"Warning: Did not recognize '{showplots}' as a valid input. Valid inputs are:")
+                print(f"'balances', 'individual balances', 'total balance', 'pie', or 'all'.")
+                print(f"Defaulting to no plots...")
+    
+    def make_balance_plot(self, ax, monthly_payment):
+        ax.set_xlabel('Months')
+        ax.set_ylabel('Balance ($)')
+        ax.grid(True)
+        ax.set_title(f"{self.title}'s Loans: ${monthly_payment}/Month Payment, \\${self.total_interest_paid} paid in interest")
+    
+    def plot_all_loans(self, ax):
+        for i in range(len(self.all_loans)):
+            self.all_loans[i].plot_loan_trajectory(ax)
 
     def plot_total_loan(self, ax):
         ax.plot(self.month_archive, self.total_balance_archive, linewidth=2, label=f'Total Loan Balance ({self.title})')
+
+    def plot_piechart(self, ax):
+        # Pie chart of interest vs principal
+        ax.pie(
+            [self.total_balance_archive[0], self.total_interest_paid],
+            labels=['Principal', 'Interest'],
+            colors=['cyan', 'pink'],
+            autopct=lambda p: f'{p:.2f}%\n(${p*self.total_amount_paid/100:,.2f})',
+            startangle=90
+        )
+        ax.set_title(f"{self.title}'s Payment Breakdown:\n ${(self.total_balance_archive[0] + self.total_interest_paid):,.2f} paid total")
 
 
 if __name__ == "__main__":
