@@ -202,7 +202,7 @@ class AllLoans:
             self.all_loans[i].plot_loan_trajectory(ax)
 
     def plot_total_loan(self, ax):
-        ax.plot(self.month_archive, self.total_balance_archive, linewidth=3, label=f'Total Loan Balance ({self.title})')
+        ax.plot(self.month_archive, self.total_balance_archive, linewidth=3, label=f'Total Loan Balance')
 
     def plot_piechart(self, ax):
         # Pie chart of interest vs principal
