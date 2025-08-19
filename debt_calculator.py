@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import StrMethodFormatter
 import pandas as pd
 
 
@@ -76,7 +77,7 @@ class Loan:
             return 0, amount_paid
 
     def plot_loan_trajectory(self, ax):
-        ax.plot(self.month_archive, self.balance_archive, linewidth=2, label=f'${self.start_balance} at {self.interest}%')
+        ax.plot(self.month_archive, self.balance_archive, linewidth=1.5, label=f'${self.start_balance} at {self.interest}%')
 
 
 # This is a list of all of the loans
@@ -190,26 +191,30 @@ class AllLoans:
                 print(f"Defaulting to no plots...")
     
     def make_balance_plot(self, ax, monthly_payment):
-        ax.set_xlabel('Months')
-        ax.set_ylabel('Balance ($)')
+        ax.set_xlabel('Months', fontsize=12)
+        ax.set_ylabel('Balance ($)', fontsize=12)
+        ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
         ax.grid(True)
-        ax.set_title(f"{self.title}'s Loans: ${monthly_payment}/Month Payment, \\${self.total_interest_paid} paid in interest")
+        ax.set_title(f"{self.title}'s Loans: ${monthly_payment}/Month Payment, \\${self.total_interest_paid} paid in interest", fontsize=14)
     
     def plot_all_loans(self, ax):
         for i in range(len(self.all_loans)):
             self.all_loans[i].plot_loan_trajectory(ax)
 
     def plot_total_loan(self, ax):
-        ax.plot(self.month_archive, self.total_balance_archive, linewidth=2, label=f'Total Loan Balance ({self.title})')
+        ax.plot(self.month_archive, self.total_balance_archive, linewidth=3, label=f'Total Loan Balance ({self.title})')
 
     def plot_piechart(self, ax):
         # Pie chart of interest vs principal
         wedges, texts, autotexts = ax.pie(
             [self.total_balance_archive[0], self.total_interest_paid],
-            labels=['Principal', 'Interest'],
-            colors=['cyan', 'pink'],
-            autopct=lambda p: f'{p:.2f}%\n(${p*self.total_amount_paid/100:,.2f})',
-            startangle=90
+            labels=[f'Principal: ${self.total_balance_archive[0]:,.2f}', f'Interest: ${self.total_interest_paid:,.2f}'],
+            colors=["#33b43a", '#d92b25'],
+            autopct=lambda p: f'{p:.2f}%',
+            startangle=90,
+            wedgeprops={'width': 0.5, 'edgecolor': 'black', 'linewidth': 1},
+            explode = (0, 0.05),
+            pctdistance=0.25
         )
 
         # Set label font size (outside the pie)
