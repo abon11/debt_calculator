@@ -90,29 +90,6 @@ class AllLoans:
         self.month_archive = [0]
         self.total_amount_paid = 0
 
-    # # order the loan list based on target loans
-    # def order_loans(self, current_month):
-    #     ordered_list = []
-
-    #     full_loans = []
-    #     for i, loan in enumerate(self.all_loans):
-    #         if loan.balance > 0:
-    #             full_loans.append(loan)
-
-    #     num_full_loans = len(full_loans)
-
-
-    #     for j in range(num_full_loans):
-    #         max_interest = 0
-    #         max_loan = 0
-    #         for i, loan in enumerate(full_loans):
-    #             if (loan.interest > max_interest) and (current_month > loan.start):
-    #                 max_interest = loan.interest
-    #                 max_loan = i
-    #         ordered_list.append(full_loans[max_loan])
-    #         full_loans.pop(max_loan)
-        
-    #     return ordered_list
     def order_loans(self, current_month, ramsay=False):
         """
         Orders loans for repayment.
