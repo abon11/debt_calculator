@@ -10,7 +10,8 @@ def main():
     all_loans = parse_csv(csv_file)
     monthly_payment = 2000
 
-    all_loans.calculate_loans(1000, monthly_payment, showplots="all")
+    # all_loans.calculate_loans(1000, monthly_payment, showplots="all")
+    all_loans.calculate_breakpoint(ramsay=False, step=100)
 
 
 def parse_csv(csv):
@@ -85,7 +86,7 @@ class AllLoans:
     def __init__(self, all_loans, title):
         self.all_loans = all_loans
         self.title = title
-        self.calc_total_balance()
+        self.total_balance = self.calc_total_balance()
         self.total_balance_archive = [self.total_balance]
         self.month_archive = [0]
         self.total_amount_paid = 0
@@ -128,7 +129,77 @@ class AllLoans:
         for loan in self.all_loans:
             total_balance += loan.balance
         
-        self.total_balance = total_balance
+        # self.total_balance = total_balance
+        return total_balance
+
+    def calculate_breakpoint(self, ramsay, P_max=20000, step=1):
+        """
+        Uses binary search to find the smallest P where:
+            I(P) - I(P + step) < step
+
+        step = resolution of the search (like ΔP)
+        """
+        def I(P):
+            loans = [Loan(l.balance, l.interest, l.start) for l in self.all_loans]
+            return float(self.calc_hypothetical_loan(loans, P, ramsay=ramsay))
+        # define the monotone predicate
+        def good(P):
+            """True if adding 'step' dollars no longer saves at least 'step' dollars."""
+            interest_P      = I(P)
+            interest_Pstep  = I(P + step)
+            M = interest_P - interest_Pstep
+            return M < step
+        # binary search on integer grid
+        lo, hi = 0, P_max
+        while lo < hi:
+            mid = (lo + hi) // 2
+
+            if good(mid):
+                hi = mid
+            else:
+                lo = mid + 1
+        # 'lo' is the first P that satisfies the condition
+        return lo
+
+    @staticmethod
+    def calc_hypothetical_loan(ordered_loans, monthly_payment, ramsay, max_months=1000):
+        def total_bal(loans):
+            return sum(float(loan.balance) for loan in loans)
+        
+        original_balance = total_bal(ordered_loans)
+        total_paid = 0.0
+
+        for month in range(1, max_months + 1):
+            active = [ln for ln in ordered_loans if ln.balance > 0.0]
+            if not active:
+                break
+
+            # Choose payoff order for this month
+            if ramsay:
+                # smallest balance first
+                pay_order = sorted(active, key=lambda ln: ln.balance)
+            else:
+                # interest accruing first by highest rate, then non accruing
+                accruing = [ln for ln in active if month > ln.start]
+                non_accruing = [ln for ln in active if month <= ln.start]
+                pay_order = sorted(accruing, key=lambda ln: ln.interest, reverse=True) + non_accruing
+
+            # make payments this month in chosen order
+            rollover = float(monthly_payment)
+            for i, loan in enumerate(pay_order):
+                rollover, amount_paid = loan.calculate_month(rollover)
+                total_paid += float(amount_paid)
+                if rollover <= 0.0:
+                    # no more cash to deploy this month
+                    # but keep looping if your loan.calculate_month can return negative rollover by design
+                    rollover = 0.0
+
+            if total_bal(ordered_loans) <= 0.0:
+                break
+
+        principal_reduction = original_balance - total_bal(ordered_loans)
+        total_interest_paid = round(total_paid - principal_reduction, 2)
+        return total_interest_paid
 
     def calculate_loans(self, months, monthly_payment, showplots="None", ramsay=False):
         total_amount_paid = 0
@@ -143,7 +214,7 @@ class AllLoans:
 
                 total_amount_paid += amount_paid
 
-            self.calc_total_balance()
+            self.total_balance = self.calc_total_balance()
             self.total_balance_archive.append(self.total_balance)
             self.month_archive.append(month)
             if self.total_balance == 0:
