@@ -5,13 +5,13 @@ import pandas as pd
 
 
 def main():
-    csv_file = "debts/tristan_loans.csv"
+    csv_file = "debts/emily_loans.csv"
 
     all_loans = parse_csv(csv_file)
-    monthly_payment = 2000
+    monthly_payment = 3800
 
-    # all_loans.calculate_loans(1000, monthly_payment, showplots="all")
-    all_loans.calculate_breakpoint(ramsay=False, step=100)
+    all_loans.calculate_loans(1000, monthly_payment, showplots="individual balances")
+    # all_loans.calculate_breakpoint(ramsay=False, step=100)
 
 
 def parse_csv(csv):
