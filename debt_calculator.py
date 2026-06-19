@@ -201,7 +201,7 @@ class AllLoans:
         total_interest_paid = round(total_paid - principal_reduction, 2)
         return total_interest_paid
 
-    def calculate_loans(self, months, monthly_payment, showplots="None", ramsay=False):
+    def calculate_loans(self, months, monthly_payment, showplots="None", ramsay=False, print_balances=False):
         total_amount_paid = 0
         rollover_cash = 0
         for month in range(1, months+1):
@@ -230,6 +230,11 @@ class AllLoans:
         print(f"This resulted in paying a total of ${total_amount_paid:,.2f}, which means we paid ${self.total_interest_paid:,.2f} in interest.\n")
 
         self.total_amount_paid = total_amount_paid
+
+        if print_balances:
+            print("\nIndividual loan balances:")
+            for i, loan in enumerate(self.all_loans):
+                print(f"Loan {i+1}: ${loan.balance:.2f} at {loan.interest*100:.2f}%")
 
         if showplots.lower() == "balances":
             fig, ax = plt.subplots(figsize=(10, 6))
